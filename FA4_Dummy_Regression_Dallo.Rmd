@@ -1,0 +1,160 @@
+---
+title: "APM1205. Formative Assessment (FA 4)"
+output: 
+  pdf_document:
+    latex_engine: xelatex
+date: "2026-09-27"
+---
+
+```{r setup, include=TRUE}
+# Set global options for the document: echo = TRUE ensures your code is visible in the PDF
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# Load the required package containing the data
+library(ggplot2)
+
+# Load the diamonds dataset into the environment
+data(diamonds)
+```
+
+### Part A
+```{r part-a-setup}
+# 1. Load the required package and dataset
+library(ggplot2)
+data(diamonds)
+
+# 2. Check the dimensions (Observations and Variables)
+dim(diamonds)
+
+# 3. Check the internal structure and data types
+str(diamonds)
+
+# 4. View a statistical summary of the variables
+summary(diamonds)
+```
+### 1.observations and variables are contained in the dataset
+The dataset contains 53,940 rows (observations) and 10 columns (variables)
+
+### 2.the response variable and measures
+The variable is price and it measures the retail price of the diamond in US Dollars ($).
+
+### 3.quantitative explanatory variable used in this assessment and its measurement
+This variable is carat and it measures the physical weight of the diamond (where 1 carat is equivalent to 200 milligrams or 0.2 grams).
+
+### 4.the categorical explanatory variable and its five categories
+This variable is called cut and it's five categories are Fair, Good, Very Good, Premium, and Ideal.
+
+### 5.category of cut as the reference category and a justification of a reference category is necessary when using dummy variables
+One of category of cut as the reference category I chose is ideal and to justify why this is necessary is that a baseline or reference category is required to avoid the dummy variable trap (perfect multicollinearity). If an intercept $\beta_0$ is included in your model, including a dummy variable for all \[m\] categories makes the matrix mathematically impossible to solve because the categories sum to exactly 1. The reference category serves as the foundational baseline to which all other category coefficients are directly compared.
+
+
+# Part B. Constructing Dummy Variables
+
+### 1. Dummy-Variable Coding Table
+Using **Fair** as our reference category, a diamond with a "Fair" cut will be represented when all dummy variables are equal to zero (\(D_1 = D_2 = D_3 = D_4 = 0\)). 
+
+| Cut | \(D_1\) (Good) | \(D_2\) (Very Good) | \(D_3\) (Premium) | \(D_4\) (Ideal) |
+|:---|:---:|:---:|:---:|:---:|
+| **Fair (Reference)** | 0 | 0 | 0 | 0 |
+| **Good**             | 1 | 0 | 0 | 0 |
+| **Very Good**        | 0 | 1 | 0 | 0 |
+| **Premium**          | 0 | 0 | 1 | 0 |
+| **Ideal**            | 0 | 0 | 0 | 1 |
+
+### 2. What the All-Zero Category Represents
+The all-zero category (\(D_1=0, D_2=0, D_3=0, D_4=0\)) represents the **reference category**, which in this scheme is the **Fair** cut quality. In the regression model, the baseline intercept $\beta_0$ will directly capture the expected price of a diamond with a "Fair" cut when its weight (`carat`) is zero. All other dummy variable coefficients will show the expected change in price compared to this baseline Fair cut.
+
+### 3. Why Five Dummy Variables Should Not Be Included
+Including five dummy variables alongside an intercept creates a mathematical error known as **perfect multicollinearity** (or the *dummy variable trap*). 
+
+Because every diamond must fall into exactly one of the five categories, the sum of all five dummy variables would always equal exactly 1 (\(D_{Fair} + D_{Good} + D_{Very\ Good} + D_{Premium} + D_{Ideal} = 1\)). Since the model's intercept column is also a vector of all ones, the fifth dummy column provides completely redundant information. Mathematically, the data matrix becomes singular (not invertible), meaning R would be completely unable to calculate unique estimates for the coefficients. To solve this, we must drop one category to serve as the baseline (\(m - 1\) dummy variables).
+
+# Part C. Additive Dummy-Variable Regression
+
+```{r part-c-additive}
+# 1. Fit the additive multiple linear regression model
+model1 <- lm(price ~ carat + cut, data = diamonds)
+
+# 2. Display the comprehensive statistical summary
+summary(model1)
+```
+
+### 1. The Estimated Regression Equation
+Based on the R output from the additive model setup, the general estimated regression line equation takes the following structure (rounded to three decimal places):
+
+\[\widehat{\text{Price}}_i = -3875.470 + 7871.082(\text{Carat}_i) + 1120.332(D_{Good,i}) + 1510.135(D_{VeryGood,i}) + 1439.077(D_{Premium,i}) + 1800.924(D_{Ideal,i})\]
+
+*Where:*
+* \(D_{Good}, D_{VeryGood}, D_{Premium}, D_{Ideal}\) act as the 0/1 dummy indicators.
+* The reference category is a **Fair** cut quality diamond (when all indicator dummies are set to 0).
+
+### 2. Interpretation of the Carat Coefficient
+The estimated slope coefficient for `carat` is **7871.082**. This means that **holding the quality of the diamond's cut constant**, a one-unit increase in the weight of a diamond (1 carat) is associated with an estimated average **increase of \$7,871.08** in its price.
+
+### 3. Interpretation of a Dummy-Variable Coefficient
+Let us select the **Ideal** dummy variable coefficient (\(\gamma_4 = 1800.924\)):
+The coefficient for `cutIdeal` is **1800.924**. This means that **holding the diamond weight (carat) fixed**, a diamond with an **Ideal cut** is estimated to cost **\$1,800.92 more** on average compared to a baseline diamond with a **Fair cut**.
+
+### 4. Interpretation of the R² Value
+The Multiple \(R^2\) value for this model is approximately **0.856**. This states that **85.6% of the total variation in diamond prices** can be explained by the linear relationship with its weight (`carat`) and its cut quality (`cut`).
+
+### 5. Evaluating Slopes Across Cut Categories
+Based on this additive model, the regression lines across all diamond cut categories **have the exact same slope**. 
+* **Reason:** The additive syntax (`carat + cut`) forces a single universal slope coefficient for `carat` (\(7,871.082\)) across all observations. The dummy variables only shift the intercept up or down, resulting in a set of **parallel regression lines** that cannot change angle based on the cut category.
+
+# Part D. Interaction Between Carat and Cut
+
+```{r part-d-interaction}
+# 1. Fit the interaction regression model
+model2 <- lm(price ~ carat * cut, data = diamonds)
+
+# 2. View coefficients and significance tests for the interaction terms
+summary(model2)
+
+# 3. Perform an incremental F-test (ANOVA) comparing model1 and model2
+# This directly evaluates whether adding interaction terms significantly improves model fit
+anova(model1, model2)
+```
+# Part D. Interaction Between Carat and Cut
+
+### 1. Null and Alternative Hypotheses
+* **Null Hypothesis (H₀):** \(\beta_{carat \times cutGood} = \beta_{carat \times cutVeryGood} = \beta_{carat \times cutPremium} = \beta_{carat \times cutIdeal} = 0\). The effect of a diamond's weight (carat) on its price does not depend on the quality of its cut (no interaction effect exists).
+* **Alternative Hypothesis (H₁):** At least one interaction coefficient is not equal to zero. The effect of a diamond's weight on its price changes depending on the quality of its cut (an interaction effect exists).
+
+### 2. Interaction Coefficients and P-Values
+In the `summary(model2)` output, the interaction terms are listed at the bottom of the coefficients table (e.g., `carat:cutGood`, `carat:cutVery Good`, `carat:cutPremium`, and `carat:cutIdeal`). In the official `diamonds` dataset, these terms all show highly significant p-values (p < 0.001), indicating strong initial evidence of an interaction.
+
+### 3. ANOVA / Incremental F-Test Evaluation
+The command `anova(model1, model2)` performs a drop-in-deviance F-test. It compares the residual sum of squares of the restricted additive model against the unrestricted interaction model. The resulting test statistic yields an extremely large F-value and a corresponding p-value well below the 0.05 threshold (p < 2.2 × 10⁻¹⁶).
+
+### 4. Statistical Decision and Practical Context
+At α = 0.05, we **reject the null hypothesis (H₀)**. There is overwhelming statistical evidence to conclude that a significant interaction effect exists between diamond weight and cut quality. Practically, this means that an extra carat of weight adds significantly more dollar value to a high-quality cut (like Ideal) than it does to a lower-quality cut (like Fair).
+
+### 5. Practical Difference Between Models
+The additive model forces all cut qualities to share a single parallel slope, meaning a carat adds the exact same dollar amount regardless of cut beauty. The interaction model allows the slopes to vary, realistically showing that the financial return on diamond weight accelerates as the premium quality of the cut increases.
+
+
+# Part E. Visualization and Statistical Conclusion
+
+```{r part-e-visualization, fig.height=5, fig.width=7, fig.align='center'}
+# Generate the scatterplot with independent linear regression lines per cut category
+ggplot(diamonds, aes(x = carat, y = price, color = cut)) +
+  geom_point(alpha = 0.2) + # Keeps points semi-transparent to handle overlapping data
+  geom_smooth(method = "lm", se = FALSE, linewidth = 1.2) + 
+  labs(
+    title = "Diamond Price versus Carat by Cut Quality",
+    subtitle = "Comparing Interaction Regression Slopes",
+    x = "Weight (Carats)",
+    y = "Price (US Dollars)",
+    color = "Cut Quality"
+  ) +
+  theme_minimal() + # Cleans up the background grid lines for a professional report
+  scale_y_continuous(labels = scales::comma)
+```
+
+*Conclusion:
+*-What the relationship between the price and the weight is that the higher the cut quality, the higher the price yet the slightly lower the weights, which kind of worked inversely.
+*-The role of the cut determines the quality of each diamond by price per carats whether the changes are direct or not.
+*-What the dummy variables mean is that how good the diamond is after cutting and still valuable to sell.
+*-On how the effect of carats differs from cut quaity, is how accurate or well cut to the ideal size or shape and not much focus on weight.
+*-The regression analyst suggest that diamonds are better with how ideal or well cut and not mattering much of the weight or carats and doesn't matter how heavy it is if the cut quality to the ideal is not that good or close.
