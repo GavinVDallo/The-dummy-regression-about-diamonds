@@ -158,3 +158,20 @@ ggplot(diamonds, aes(x = carat, y = price, color = cut)) +
 *-What the dummy variables mean is that how good the diamond is after cutting and still valuable to sell.
 *-On how the effect of carats differs from cut quaity, is how accurate or well cut to the ideal size or shape and not much focus on weight.
 *-The regression analyst suggest that diamonds are better with how ideal or well cut and not mattering much of the weight or carats and doesn't matter how heavy it is if the cut quality to the ideal is not that good or close.
+```{r save-the-plot, include=FALSE}
+library(ggplot2)
+
+# 1. Generate the plot
+diamond_plot <- ggplot(diamonds, aes(x = carat, y = price, color = cut)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Diamond Price versus Carat by Cut", x = "Carat", y = "Price (US Dollars)")
+
+# 2. Save it directly into the figures folder
+ggsave("figures/diamond_price_vs_carat.png", plot = diamond_plot, width = 8, height = 6, dpi = 300)
+```
+
+```{r r diamond-plot, echo=FALSE, fig.cap="Diamond Price versus Carat by Cut", fig.align="center", out.width="80%"}
+knitr::include_graphics(normalizePath("figures/diamond_price_vs_carat.png"))
+```
+
